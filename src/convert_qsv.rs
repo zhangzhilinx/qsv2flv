@@ -10,7 +10,8 @@ use crate::flv_format::{KeyFrame, MetaData};
 
 const TAG_TAIL_SIZE_LEN: usize = 4;
 
-const DEFAULT_COPY_BUFF_SIZE: usize = 8388608; // 默认的TAG拷贝缓冲区大小设为8MB
+const DEFAULT_CAP_BLOCKS: usize = 131072; // TagBlocks向量的默认容量
+const DEFAULT_CAP_BUFFER: usize = 8388608; // 默认的TAG拷贝缓冲区容量设为8MB
 
 pub enum FlvTagType {
     Audio = 0x08,
@@ -53,8 +54,8 @@ pub type FlvTagBlocks = Vec<FlvTagBlock>;
 pub fn validate_qsv_format(qsv: &mut File) -> error::Result<()> {
     const QIYI_TAG: &[u8] = b"QIYI VIDEO";
 
-    let mut qsv_tag: [u8; QIYI_TAG.len()] = [0; QIYI_TAG.len()];
-    let mut qsv_ver: [u8; 4] = [0; 4];
+    let mut qsv_tag = [0u8; QIYI_TAG.len()];
+    let mut qsv_ver = [0u8; 4];
     qsv.seek(SeekFrom::Start(0))?;
     // 不必担心文件读取的字节数小于buffer大小的情况
     qsv.read(&mut qsv_tag)?;
@@ -69,6 +70,7 @@ pub fn validate_qsv_format(qsv: &mut File) -> error::Result<()> {
     }
 }
 
+#[inline]
 pub fn seek_qsv_to_start(qsv: &mut File) -> std::io::Result<bool> {
     qsv.seek(SeekFrom::Start(0x4A))?;
     let mut buffer = [0u8; 12];
@@ -92,9 +94,10 @@ pub fn seek_qsv_to_start(qsv: &mut File) -> std::io::Result<bool> {
     }
 }
 
+#[inline]
 pub fn skip_qsv_metadata(qsv: &mut File) -> std::io::Result<()> {
     qsv.seek(SeekFrom::Current(0x0D))?;
-    let mut len: u32 = 0;
+    let mut len = 0u32;
     let mut buf = [0u8; 4]; // 共用的缓冲区
 
     loop {
@@ -161,7 +164,7 @@ pub fn tag_blocks_from_qsv(qsv: &mut File) -> std::io::Result<FlvTagBlocks> {
         }
     }
 
-    let mut blocks = FlvTagBlocks::new();
+    let mut blocks = FlvTagBlocks::with_capacity(DEFAULT_CAP_BLOCKS);
 
     seek_qsv_to_start(qsv)?;
     skip_qsv_metadata(qsv)?;
@@ -361,6 +364,7 @@ pub fn write_from_qsv_to_flv(
             self.seek(SeekFrom::Current(0))
         }
     }
+
     flv.seek(SeekFrom::Start(0))?;
     flv.write_all(&MetaData::META_1)?;
 
@@ -435,7 +439,7 @@ pub fn write_from_qsv_to_flv(
     flv.write_all(&(seek_pos as u32).to_be_bytes())?;
 
     flv.seek(SeekFrom::End(0))?;
-    let mut buf = vec![0u8; DEFAULT_COPY_BUFF_SIZE];
+    let mut buf: Vec<u8> = Vec::with_capacity(DEFAULT_CAP_BUFFER);
     for tag in tags {
         buf.resize(tag.size as usize + TAG_TAIL_SIZE_LEN, 0);
         qsv.seek(SeekFrom::Start(tag.offset))?;
