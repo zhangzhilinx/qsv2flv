@@ -37,14 +37,13 @@ pub enum ErrorKind {
 }
 
 impl ErrorKind {
-    pub(crate) fn as_str(&self) -> &str {
-        use std::error::Error;
+    pub(crate) fn to_string(&self) -> String {
         match self {
-            ErrorKind::Io(err) => err.description(),
-            ErrorKind::IncorrectQsvVersion => "incorrect qsv version",
-            ErrorKind::IncorrectQsvFormat => "incorrect qsv format",
-            ErrorKind::QsvTagsIsEmpty => "qsv has 0 tags",
-            ErrorKind::MediaDurationIsTooShort => "media duration is too short",
+            ErrorKind::Io(err) => err.to_string(),
+            ErrorKind::IncorrectQsvVersion => String::from("incorrect qsv version"),
+            ErrorKind::IncorrectQsvFormat => String::from("incorrect qsv format"),
+            ErrorKind::QsvTagsIsEmpty => String::from("qsv has 0 tags"),
+            ErrorKind::MediaDurationIsTooShort => String::from("media duration is too short"),
         }
     }
 }
@@ -67,7 +66,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self.kind() {
             ErrorKind::Io(err) => write!(f, "{}", err),
-            _ => write!(f, "{}", &self.0.as_str()),
+            _ => write!(f, "{}", &self.0.to_string()),
         }
     }
 }

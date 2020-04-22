@@ -49,6 +49,7 @@ pub fn convert_qsv_to_flv(qsv: &mut File, flv: &mut File, verbose: bool) -> erro
     let meta = meta_data_from_tag_blocks(qsv, &tags)?;
     cond!(verbose, println!("[STEP] Write from qsv to flv..."));
     write_from_qsv_to_flv(qsv, &tags, flv, &meta)?;
+    flv.sync_all()?;
 
     Ok(())
 }
