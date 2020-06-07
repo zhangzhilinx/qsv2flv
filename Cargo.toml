@@ -9,7 +9,7 @@ homepage = "https://github.com/zhangzhilinx/qsv2flv"
 repository = "https://github.com/zhangzhilinx/qsv2flv"
 license-file = "LICENSE"
 
-keywords = ["cli", "qsv", "flv", "convert", "decoder", "iqiyi"]
+keywords = ["cli", "qsv", "flv", "convert", "decoder"]
 categories = ["command-line-utilities", "multimedia::encoding"]
 
 exclude = [".idea"]
