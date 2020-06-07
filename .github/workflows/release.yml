@@ -1,0 +1,80 @@
+name: release
+
+on:
+  push:
+    tags: [ 'v*.*.*', 'latest' ]
+#  schedule:
+#    - cron: '0 0 * * *' # midnight UTC
+
+env:
+  PROJECT_NAME: ${{ github.event.repository.name }}
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTFLAGS: -D warnings
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create a release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ env.PROJECT_NAME }} ${{ github.ref }}
+          body: |
+            更新日志详见README.md
+            如果您有任何疑惑，也请看README.md
+
+            <br>
+
+            See READEME.md for the change log
+            If you have any doubts, see README.md
+          draft: false
+          prerelease: false
+
+  build_and_upload:
+    name: Build And Upload
+    needs: create_release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [
+          aarch64-unknown-linux-musl,
+          armv7-unknown-linux-musleabi,
+          i686-pc-windows-msvc, i686-unknown-linux-musl,
+          x86_64-apple-darwin, x86_64-pc-windows-msvc, x86_64-unknown-linux-musl
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install The Corresponding Rust Toolchain":" ${{ matrix.target }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+          profile: minimal
+
+      - name: Build Binary For ${{ matrix.target }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.steps.create_release.outputs.upload_url }}
+          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
+          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
+          asset_content_type: application/octet-stream
