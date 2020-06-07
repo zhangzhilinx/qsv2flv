@@ -12,6 +12,8 @@ license-file = "LICENSE"
 keywords = ["cli", "qsv", "flv", "convert", "decoder", "iqiyi"]
 categories = ["command-line-utilities", "multimedia::encoding"]
 
+exclude = [".idea"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
