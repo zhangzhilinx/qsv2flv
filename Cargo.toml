@@ -1,8 +1,16 @@
 [package]
 name = "qsv2flv"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["ZhangZhilin <corex_public@outlook.com>"]
 edition = "2018"
+description = "A tool developed in Rust to convert QSV to FLV"
+
+homepage = "https://github.com/zhangzhilinx/qsv2flv"
+repository = "https://github.com/zhangzhilinx/qsv2flv"
+license-file = "LICENSE"
+
+keywords = ["cli", "qsv", "flv", "convert", "decoder", "iqiyi"]
+categories = ["command-line-utilities", "multimedia::encoding"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

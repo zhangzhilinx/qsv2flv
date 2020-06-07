@@ -10,8 +10,8 @@ use crate::flv_format::{KeyFrame, MetaData};
 
 const TAG_TAIL_SIZE_LEN: usize = 4;
 
-const DEFAULT_CAP_BLOCKS: usize = 131072; // TagBlocks向量的默认容量
-const DEFAULT_CAP_BUFFER: usize = 8388608; // 默认的TAG拷贝缓冲区容量设为8MB
+const DEFAULT_CAP_BLOCKS: usize = 131_072; // TagBlocks向量的默认容量
+const DEFAULT_CAP_BUFFER: usize = 8_388_608; // 默认的TAG拷贝缓冲区容量设为8MB
 
 pub enum FlvTagType {
     Audio = 0x08,
@@ -57,9 +57,9 @@ pub fn validate_qsv_format(qsv: &mut File) -> error::Result<()> {
     let mut qsv_tag = [0u8; QIYI_TAG.len()];
     let mut qsv_ver = [0u8; 4];
     qsv.seek(SeekFrom::Start(0))?;
-    // 不必担心文件读取的字节数小于buffer大小的情况
-    qsv.read(&mut qsv_tag)?;
-    qsv.read(&mut qsv_ver)?;
+
+    qsv.read_exact(&mut qsv_tag)?;
+    qsv.read_exact(&mut qsv_ver)?;
 
     if i32::from_le_bytes(qsv_ver) != 2 {
         Err(error::Error::from(error::ErrorKind::IncorrectQsvVersion))
@@ -128,8 +128,8 @@ pub fn tag_blocks_from_qsv(qsv: &mut File) -> std::io::Result<FlvTagBlocks> {
         qsv.read_exact(&mut buf)?;
         qsv.seek(SeekFrom::Current(-11))?;
 
-        if let Some(_) = FlvTagType::from_byte(buf[0]) {
-            Ok(&buf[8..11] == [0u8; 3])
+        if FlvTagType::from_byte(buf[0]).is_some() {
+            Ok([0u8; 3] == buf[8..11])
         } else {
             Ok(false)
         }
@@ -139,7 +139,7 @@ pub fn tag_blocks_from_qsv(qsv: &mut File) -> std::io::Result<FlvTagBlocks> {
     fn move_qsv_to_next_tag(qsv: &mut File) -> std::io::Result<()> {
         let mut buf = [0u8; 4];
         qsv.read_exact(&mut buf)?;
-        let data_size = 0x00FFFFFFu32 & u32::from_be_bytes(buf);
+        let data_size = 0x00FF_FFFF_u32 & u32::from_be_bytes(buf);
         qsv.seek(SeekFrom::Current(data_size as i64 + 11))?;
         Ok(())
     }
@@ -152,7 +152,7 @@ pub fn tag_blocks_from_qsv(qsv: &mut File) -> std::io::Result<FlvTagBlocks> {
 
         if let Some(tag_type) = FlvTagType::from_byte(buf[0]) {
             let offset = qsv.seek(SeekFrom::Current(0))?;
-            let size = (0x00FFFFFFu32 & u32::from_be_bytes(buf)) as u64 + 11; // 11=4+3+1+3
+            let size = (0x00FF_FFFF_u32 & u32::from_be_bytes(buf)) as u64 + 11; // 11=4+3+1+3
             qsv.seek(SeekFrom::Current(size as i64 + 4))?; // (11+tag_body_size)+4
             Ok(Some(FlvTagBlock {
                 tag_type,
@@ -170,9 +170,13 @@ pub fn tag_blocks_from_qsv(qsv: &mut File) -> std::io::Result<FlvTagBlocks> {
     skip_qsv_metadata(qsv)?;
     while can_read_a_tag_header(qsv)? {
         if is_qsv_at_tag_start(qsv)? {
-            match read_a_tag_from_here(qsv)? {
-                Some(block) => blocks.push(block),
-                None => (), // TODO None可能是由于QSV文件格式不正确
+            // TODO 如果匹配到None，可能是由于QSV文件格式不正确，日后可以专门针对该问题返回错误
+            // match read_a_tag_from_here(qsv)? {
+            //     Some(block) => blocks.push(block),
+            //     None => (),
+            // }
+            if let Some(block) = read_a_tag_from_here(qsv)? {
+                blocks.push(block)
             }
         } else {
             skip_qsv_metadata(qsv)?;
@@ -184,7 +188,7 @@ pub fn tag_blocks_from_qsv(qsv: &mut File) -> std::io::Result<FlvTagBlocks> {
     Ok(blocks)
 }
 
-pub fn meta_data_from_tag_blocks(qsv: &mut File, tags: &FlvTagBlocks) -> error::Result<MetaData> {
+pub fn meta_data_from_tag_blocks(qsv: &mut File, tags: &[FlvTagBlock]) -> error::Result<MetaData> {
     #[inline]
     fn parse_video_tag(qsv: &mut File, tag: &FlvTagBlock) -> error::Result<(bool, u8)> {
         const TAG_VIDEO_MIN_SIZE: u64 = 12u64;
@@ -272,7 +276,7 @@ pub fn meta_data_from_tag_blocks(qsv: &mut File, tags: &FlvTagBlocks) -> error::
         samples: [0, 0, 0, 0, 0, 0],
     };
 
-    if tags.len() > 0 {
+    if !tags.is_empty() {
         meta.duration = get_time_stamp_from_tag(qsv, tags.last().unwrap())? as f64 / 1000f64;
         meta.timestamp_last = meta.duration;
 
@@ -339,20 +343,19 @@ pub fn meta_data_from_tag_blocks(qsv: &mut File, tags: &FlvTagBlocks) -> error::
             }
             file_pos += tag.size + TAG_TAIL_SIZE_LEN as u64;
         }
-        match meta.key_frames.last() {
-            Some(last_key_frame) => meta.timestamp_last_key_frame = last_key_frame.time_pos,
-            _ => {}
+        if let Some(last_key_frame) = meta.key_frames.last() {
+            meta.timestamp_last_key_frame = last_key_frame.time_pos
         }
     } else {
         return Err(error::Error::from(error::ErrorKind::QsvTagsIsEmpty));
     }
 
-    return Ok(meta);
+    Ok(meta)
 }
 
 pub fn write_from_qsv_to_flv(
     qsv: &mut File,
-    tags: &FlvTagBlocks,
+    tags: &[FlvTagBlock],
     flv: &mut File,
     meta: &MetaData,
 ) -> std::io::Result<()> {
