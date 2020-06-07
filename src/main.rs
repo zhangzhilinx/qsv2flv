@@ -12,30 +12,12 @@ use crate::convert_qsv::{
 mod convert_qsv;
 mod error;
 mod flv_format;
+#[macro_use]
+mod macros;
 
 // 爱奇艺的QSV视频格式实际上是F4V格式，对原视频信息进行了混淆和干扰
 // 本程序的反混淆处理针对的是第2版本的qsv文件（可能无法处理2016年之前的视频）
 // 是相关github项目的Rust版本
-
-macro_rules! cond {
-    ($condition: expr, $expr1: expr) => {
-        if $condition {
-            $expr1
-        }
-    };
-    ($condition: expr, $expr1: expr, $expr2: expr) => {
-        if $condition {
-            $expr1
-        } else {
-            $expr2
-        }
-    };
-    ($condition: expr, $stmt1: stmt) => {
-        if $condition {
-            $stmt1
-        }
-    };
-}
 
 pub fn convert_qsv_to_flv(qsv: &mut File, flv: &mut File, verbose: bool) -> error::Result<()> {
     cond!(verbose, println!("[STEP] Validate qsv file..."));
@@ -66,7 +48,7 @@ fn main() {
         // (@arg debug: -d --debug ... "Sets the level of debugging information")
         (@arg verbose: -v --verbose "Print test information verbosely")
     )
-    .get_matches();
+        .get_matches();
 
     cond!(matches.is_present("verbose"), verbose = true);
 
