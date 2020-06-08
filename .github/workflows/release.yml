@@ -14,40 +14,17 @@ env:
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  create_release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create a release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ env.PROJECT_NAME }} ${{ github.ref }}
-          body: |
-            更新日志详见README.md
-            如果您有任何疑惑，也请看README.md
-
-            <br>
-
-            See READEME.md for the change log
-            If you have any doubts, see README.md
-          draft: false
-          prerelease: false
-
-  build_and_upload_linux:
-    name: Build And Upload
-    needs: create_release
+  build_for_linux:
+    name: Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
         target: [
           aarch64-unknown-linux-musl,
-          armv7-unknown-linux-musleabi,
+          arm-unknown-linux-musleabi,
           i686-unknown-linux-musl,
-          x86_64-unknown-linux-musl
+          x86_64-unknown-linux-musl,
+          mips-unknown-linux-musl
         ]
     steps:
       - name: Checkout
@@ -68,20 +45,14 @@ jobs:
           command: build
           args: --release --target=${{ matrix.target }}
 
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
         with:
-          upload_url: ${{ needs.create_release.steps.create_release.outputs.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
-          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
-          asset_content_type: application/octet-stream
+          name: ${{ matrix.target }}
+          path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}
 
-  build_and_upload_windows:
-    name: Build And Upload
-    needs: create_release
+  build_for_windows:
+    name: Build
     runs-on: windows-latest
     strategy:
       matrix:
@@ -109,20 +80,14 @@ jobs:
           command: build
           args: --release --target=${{ matrix.target }}
 
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
         with:
-          upload_url: ${{ needs.create_release.steps.create_release.outputs.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
-          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
-          asset_content_type: application/octet-stream
+          name: ${{ matrix.target }}
+          path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}.exe
 
-  build_and_upload_macos:
-    name: Build And Upload
-    needs: create_release
+  build_for_macos:
+    name: Build
     runs-on: macos-latest
     strategy:
       matrix:
@@ -149,13 +114,90 @@ jobs:
           command: build
           args: --release --target=${{ matrix.target }}
 
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target }}
+          path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}
+
+  release_and_publish:
+    name: Create Release And Publish
+    needs: [build_for_linux, build_for_windows, build_for_macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Branch Basename
+        id: extract_branch
+        shell: bash
+        run: echo "##[set-output name=basename;]$(echo ${GITHUB_REF#refs/heads/})"
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: List All Downloaded Artifacts
+        run: ls -R
+        working-directory: artifacts
+
+      - name: Rename All Artifacts
+        shell: bash
+        run: for i in `ls`; do for j in `ls ${i}`; do mv ./${i}/${j} ${i}/${i}-${j}; done; done
+        working-directory: artifacts
+
+      - name: List All Renamed Artifacts
+        run: ls -R
+        working-directory: artifacts
+
+      - name: Create Release And Publish These Artifacts
+        uses: softprops/action-gh-release@v1
+        #        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Release ${{ env.PROJECT_NAME }} ${{ github.ref }}
+          body: |
+            * 更新日志详见README.md
+            * 如果您有任何疑惑，也请看README.md
+            * 新手提示：
+              - 64位Windows系统: x86_64-pc-windows-msvc
+              - 32位Windows系统: i686-pc-windows-msvc
+
+            <br>
+
+            * See READEME.md for the change log
+            * If you have any doubts, see README.md
+            * Newbie tips:
+              - 64-bit Windows system: x86_64-pc-windows-msvc
+              - 32-bit Windows system: i686-pc-windows-msvc
+          files: |
+            artifacts/*/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create_release.steps.create_release.outputs.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
-          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
-          asset_content_type: application/octet-stream
+
+#      - name: Create A Release
+#        id: create_release
+#        uses: actions/create-release@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          tag_name: ${{ github.ref }}
+#          release_name: Release ${{ env.PROJECT_NAME }} ${{ github.ref }}
+#          body: |
+#            更新日志详见README.md
+#            如果您有任何疑惑，也请看README.md
+#
+#            <br>
+#
+#            See READEME.md for the change log
+#            If you have any doubts, see README.md
+#          draft: false
+#          prerelease: false
+#
+#      - name: Upload Release Asset
+#        id: upload-release-asset
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
+#          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ steps.extract_branch.outputs.basename }}
+#          asset_content_type: application/octet-stream

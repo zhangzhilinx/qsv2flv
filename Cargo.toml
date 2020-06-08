@@ -5,6 +5,7 @@ authors = ["ZhangZhilin <corex_public@outlook.com>"]
 edition = "2018"
 description = "A tool developed in Rust to convert QSV to FLV"
 
+readme = "README.md"
 homepage = "https://github.com/zhangzhilinx/qsv2flv"
 repository = "https://github.com/zhangzhilinx/qsv2flv"
 license-file = "LICENSE"
@@ -12,7 +13,7 @@ license-file = "LICENSE"
 keywords = ["cli", "qsv", "flv", "convert", "decoder"]
 categories = ["command-line-utilities", "multimedia::encoding"]
 
-exclude = [".idea"]
+exclude = [".idea", ".github"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,27 +24,27 @@ clap = "~2.27.0"
 
 
 
-[target.aarch64-unknown-linux-musl]
-linker = "aarch64-linux-musl-gcc"
-ar = "aarch64-linux-musl-ar"
+#[target.aarch64-unknown-linux-musl]
+#linker = "aarch64-linux-musl-gcc"
+#ar = "aarch64-linux-musl-ar"
 
-[target.armv7-unknown-linux-musleabi]
-linker = "arm-linux-musleabi-gcc"
-ar = "arm-linux-musleabi-ar"
+#[target.arm-unknown-linux-musleabi]
+#linker = "arm-linux-musleabi-gcc"
+#ar = "arm-linux-musleabi-ar"
 
-[target.i686-unknown-linux-musl]
-linker = "i686-linux-musl-gcc"
-ar = "i686-linux-musl-ar"
+#[target.i686-unknown-linux-musl]
+#linker = "i686-linux-musl-gcc"
+#ar = "i686-linux-musl-ar"
 
-[target.x86_64-unknown-linux-musl]
-linker = "x86_64-linux-musl-gcc"
-ar = "x86_64-linux-musl-ar"
+#[target.x86_64-unknown-linux-musl]
+#linker = "x86_64-linux-musl-gcc"
+#ar = "x86_64-linux-musl-ar"
 
-[target.aarch64-pc-windows-msvc]
-linker = "lld-link.exe"
+#[target.aarch64-pc-windows-msvc]
+#linker = "lld-link.exe"
 
-[target.i686-pc-windows-msvc]
-linker = "lld-link.exe"
+#[target.i686-pc-windows-msvc]
+#linker = "lld-link.exe"
 
-[target.x86_64-pc-windows-msvc]
-linker = "lld-link.exe"
+#[target.x86_64-pc-windows-msvc]
+#linker = "lld-link.exe"
