@@ -78,3 +78,84 @@ jobs:
           asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
           asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
           asset_content_type: application/octet-stream
+
+  build_and_upload_windows:
+    name: Build And Upload
+    needs: create_release
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [
+          aarch64-pc-windows-msvc,
+          i686-pc-windows-msvc,
+          x86_64-pc-windows-msvc
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install The Corresponding Rust Toolchain "${{ matrix.target }}"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+          profile: minimal
+
+      - name: Build Binary "${{ matrix.target }}"
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.steps.create_release.outputs.upload_url }}
+          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
+          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
+          asset_content_type: application/octet-stream
+
+  build_and_upload_macos:
+    name: Build And Upload
+    needs: create_release
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [
+          aarch64-apple-ios,
+          x86_64-apple-darwin
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install The Corresponding Rust Toolchain "${{ matrix.target }}"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+          profile: minimal
+
+      - name: Build Binary "${{ matrix.target }}"
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.steps.create_release.outputs.upload_url }}
+          asset_path: ./target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}(.exe)?
+          asset_name: ${{ env.PROJECT_NAME }}-${{ matrix.target }}-${{ github.ref }}
+          asset_content_type: application/octet-stream

@@ -16,6 +16,34 @@ exclude = [".idea"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
 chrono = "~0.4"
 clap = "~2.27.0"
+
+
+
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-musl-gcc"
+ar = "aarch64-linux-musl-ar"
+
+[target.armv7-unknown-linux-musleabi]
+linker = "arm-linux-musleabi-gcc"
+ar = "arm-linux-musleabi-ar"
+
+[target.i686-unknown-linux-musl]
+linker = "i686-linux-musl-gcc"
+ar = "i686-linux-musl-ar"
+
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"
+ar = "x86_64-linux-musl-ar"
+
+[target.aarch64-pc-windows-msvc]
+linker = "lld-link.exe"
+
+[target.i686-pc-windows-msvc]
+linker = "lld-link.exe"
+
+[target.x86_64-pc-windows-msvc]
+linker = "lld-link.exe"
